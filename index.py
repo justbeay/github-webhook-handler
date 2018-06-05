@@ -1,15 +1,14 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import io
 import os
-import re
 import sys
 import json
-import subprocess
 import requests
 import ipaddress
 import hmac
-from hashlib import sha1
+import hashlib
 from flask import Flask, request, abort
+from event_handler import GithubEventHandler
 
 """
 Conditionally import ProxyFix from werkzeug if the USE_PROXYFIX environment
@@ -23,15 +22,17 @@ module.
     import flask-github-webhook-handler.index as handler
 
 """
-if os.environ.get('USE_PROXYFIX', None) == 'true':
+# The repos.json file should be readable by the user running the Flask app,
+# and the absolute path should be given by this environment variable.
+BASE_APP_PATH = os.path.dirname(os.path.realpath(__file__))
+repos_config = json.loads(io.open(BASE_APP_PATH + '/config/repos.json', 'r').read())
+global_config = json.loads(io.open(BASE_APP_PATH + '/config/global.json', 'r').read())
+
+if global_config['use_proxyfix']:
     from werkzeug.contrib.fixers import ProxyFix
 
 app = Flask(__name__)
-app.debug = os.environ.get('DEBUG') == 'true'
-
-# The repos.json file should be readable by the user running the Flask app,
-# and the absolute path should be given by this environment variable.
-REPOS_JSON_PATH = os.environ['REPOS_JSON_PATH']
+app.debug = global_config['debug']
 
 
 @app.route("/", methods=['GET', 'POST'])
@@ -43,11 +44,11 @@ def index():
         request_ip = ipaddress.ip_address(u'{0}'.format(request.remote_addr))
 
         # If VALIDATE_SOURCEIP is set to false, do not validate source IP
-        if os.environ.get('VALIDATE_SOURCEIP', None) != 'false':
+        if not (global_config['validate_sourceip'] == False):
 
             # If GHE_ADDRESS is specified, use it as the hook_blocks.
-            if os.environ.get('GHE_ADDRESS', None):
-                hook_blocks = [unicode(os.environ.get('GHE_ADDRESS'))]
+            if global_config['ghe_address']:
+                hook_blocks = [global_config['ghe_address']]
             # Otherwise get the hook address blocks from the API.
             else:
                 hook_blocks = requests.get('https://api.github.com/meta').json()[
@@ -61,47 +62,21 @@ def index():
                 if str(request_ip) != '127.0.0.1':
                     abort(403)
 
-        if request.headers.get('X-GitHub-Event') == "ping":
-            return json.dumps({'msg': 'Hi!'})
-        if request.headers.get('X-GitHub-Event') != "push":
-            return json.dumps({'msg': "wrong event type"})
-
-        repos = json.loads(io.open(REPOS_JSON_PATH, 'r').read())
-
-        payload = json.loads(request.data)
-        repo_meta = {
-            'name': payload['repository']['name'],
-            'owner': payload['repository']['owner']['name'],
-        }
-
-        # Try to match on branch as configured in repos.json
-        match = re.match(r"refs/heads/(?P<branch>.*)", payload['ref'])
-        if match:
-            repo_meta['branch'] = match.groupdict()['branch']
-            repo = repos.get(
-                '{owner}/{name}/branch:{branch}'.format(**repo_meta), None)
-
-            # Fallback to plain owner/name lookup
-            if not repo:
-                repo = repos.get('{owner}/{name}'.format(**repo_meta), None)
-
-        if repo and repo.get('path', None):
-            # Check if POST request signature is valid
-            key = repo.get('key', None)
-            if key:
-                signature = request.headers.get('X-Hub-Signature').split(
-                    '=')[1]
-                if type(key) == unicode:
-                    key = key.encode()
-                mac = hmac.new(key, msg=request.data, digestmod=sha1)
-                if not compare_digest(mac.hexdigest(), signature):
-                    abort(403)
-
-        if repo.get('action', None):
-            for action in repo['action']:
-                subp = subprocess.Popen(action, cwd=repo.get('path', '.'))
-                subp.wait()
-        return 'OK'
+        event = request.headers.get('X-GitHub-Event')
+        payload = json.loads(request.data.decode('utf8'))
+        handler = GithubEventHandler(event, payload)
+        handler.set_config(global_config, repos_config)
+        repo_config = handler.get_repo_config()
+        secretkey = repo_config['secretkey'] if repo_config else None
+        if secretkey:
+            algo, signature = request.headers.get('X-Hub-Signature').split('=') \
+                if request.headers.get('X-Hub-Signature') and request.headers.get('X-Hub-Signature').find('=') > 0 \
+                else ['', '']
+            mac = hmac.new(secretkey.encode('utf-8'), msg=request.data, digestmod=getattr(hashlib, algo))
+            if not compare_digest(mac.hexdigest(), signature):
+                abort(403)
+        result = handler.handle()
+        return json.dumps(result) if type(result) == dict else result
 
 # Check if python version is less than 2.7.7
 if sys.version_info < (2, 7, 7):
@@ -132,6 +107,6 @@ if __name__ == "__main__":
         port_number = int(sys.argv[1])
     except:
         port_number = 80
-    if os.environ.get('USE_PROXYFIX', None) == 'true':
+    if global_config['use_proxyfix']:
         app.wsgi_app = ProxyFix(app.wsgi_app)
     app.run(host='0.0.0.0', port=port_number)

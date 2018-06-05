@@ -1,0 +1,7 @@
+{
+    "jenkins": {
+        "host": "http://example.com",
+        "user": "sampleUser",
+        "token": "asdfa9fka09089k2i2l3l24lksd8979f"
+    }
+}

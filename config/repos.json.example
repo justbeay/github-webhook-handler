@@ -1,0 +1,16 @@
+{
+    "user/project": {
+        "secretkey": "asdfswe3",
+        "branch": ["dev"],
+        "event": ["push"],
+        "jenkins_build": [
+            {
+                "job": "jenkins_job",
+                "params": {
+                    "TRIGGER_BRANCH": "{branch}",
+                    "TRIGGER_Boolean": true
+                }
+            }
+        ]
+    }
+}
