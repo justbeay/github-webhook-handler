@@ -71,9 +71,12 @@ def index():
         if secretkey:
             algo, signature = request.headers.get('X-Hub-Signature').split('=') \
                 if request.headers.get('X-Hub-Signature') and request.headers.get('X-Hub-Signature').find('=') > 0 \
-                else ['', '']
-            mac = hmac.new(secretkey.encode('utf-8'), msg=request.data, digestmod=getattr(hashlib, algo))
-            if not compare_digest(mac.hexdigest(), signature):
+                else [None, None]
+            signature_valid = algo and signature
+            if signature_valid:
+                mac = hmac.new(secretkey.encode('utf-8'), msg=request.data, digestmod=getattr(hashlib, algo))
+                signature_valid = compare_digest(mac.hexdigest(), signature)
+            if not signature_valid:
                 abort(403)
         result = handler.handle()
         return json.dumps(result) if type(result) == dict else result
