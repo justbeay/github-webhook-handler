@@ -64,7 +64,7 @@ def index():
 
         event = request.headers.get('X-GitHub-Event')
         payload = json.loads(request.data.decode('utf8'))
-        handler = GithubEventHandler(event, payload)
+        handler = GithubEventHandler(app, event, payload)
         handler.set_config(global_config, repos_config)
         repo_config = handler.get_repo_config()
         secretkey = repo_config['secretkey'] if repo_config else None

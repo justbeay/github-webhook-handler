@@ -10,7 +10,8 @@ import hmac
 from hashlib import sha1
 
 class GithubEventHandler:
-    def __init__(self, event, data):
+    def __init__(self, app, event, data):
+        self.app = app
         self.event = event
         self.data = data
 
@@ -22,7 +23,7 @@ class GithubEventHandler:
         """
         github hook event handle goes here
         """
-        print('handle github event: %s' % self.event)
+        self.app.logger.info('handle github event: %s', self.event)
         events_allowed = ['push', 'pull_request_review']
         if self.event == 'ping':
             return {'msg': 'Hi!'}
@@ -35,7 +36,7 @@ class GithubEventHandler:
                 event_hit = self._is_pull_request_review_hit(repo_config)
             # work start execute here...
             if repo_config and event_hit:
-                print("==========================")
+                self.app.logger.debug("==========================")
                 self._jenkins_build(repo_config)
                 pass
             return "OK"
@@ -64,8 +65,8 @@ class GithubEventHandler:
         return False
 
     def _is_pull_request_review_hit(self, repo_config):
-        print(">> pull_request_review event with action: %s..." % self.data['action'])
-        print(json.dumps(self.data, indent=2))
+        self.app.logger.info(">> pull_request_review event with action: %s...", self.data['action'])
+        self.app.logger.info(json.dumps(self.data, indent=2))
         # todo here...
         return False
 
