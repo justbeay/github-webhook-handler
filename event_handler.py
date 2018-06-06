@@ -24,6 +24,7 @@ class GithubEventHandler:
         github hook event handle goes here
         """
         self.app.logger.info('handle github event: %s', self.event)
+        self.app.logger.info('data send: %s', json.dumps(self.data, indent=2))
         events_allowed = ['push', 'pull_request_review']
         if self.event == 'ping':
             return {'msg': 'Hi!'}
@@ -65,8 +66,8 @@ class GithubEventHandler:
         return False
 
     def _is_pull_request_review_hit(self, repo_config):
-        self.app.logger.info(">> pull_request_review event with action: %s...", self.data['action'])
-        self.app.logger.info(json.dumps(self.data, indent=2))
+        # self.app.logger.info(">> pull_request_review event with action: %s...", self.data['action'])
+        # self.app.logger.info(json.dumps(self.data, indent=2))
         # todo here...
         return False
 
