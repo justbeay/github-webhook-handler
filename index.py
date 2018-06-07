@@ -75,35 +75,12 @@ def index():
             signature_valid = algo and signature
             if signature_valid:
                 mac = hmac.new(secretkey.encode('utf-8'), msg=request.data, digestmod=getattr(hashlib, algo))
-                signature_valid = compare_digest(mac.hexdigest(), signature)
+                signature_valid = hmac.compare_digest(mac.hexdigest(), signature)
             if not signature_valid:
                 abort(403)
         result = handler.handle()
         return json.dumps(result) if type(result) == dict else result
 
-# Check if python version is less than 2.7.7
-if sys.version_info < (2, 7, 7):
-    # http://blog.turret.io/hmac-in-go-python-ruby-php-and-nodejs/
-    def compare_digest(a, b):
-        """
-        ** From Django source **
-
-        Run a constant time comparison against two strings
-
-        Returns true if a and b are equal.
-
-        a and b must both be the same length, or False is
-        returned immediately
-        """
-        if len(a) != len(b):
-            return False
-
-        result = 0
-        for ch_a, ch_b in zip(a, b):
-            result |= ord(ch_a) ^ ord(ch_b)
-        return result == 0
-else:
-    compare_digest = hmac.compare_digest
 
 if __name__ == "__main__":
     try:

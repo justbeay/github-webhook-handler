@@ -19,7 +19,7 @@ class GithubEventHandler:
         self.global_config = global_config
         self.repos_config = repos_config
     
-    def handle(self, signature=None):
+    def handle(self):
         """
         github hook event handle goes here
         """
@@ -74,15 +74,17 @@ class GithubEventHandler:
             'owner': self.data['pull_request']['head']['repo']['owner']['login'],
             'created_by': self.data['pull_request']['user']['login']
         }
-        if self.data['pull_request']['merged']:
-            self.repo_meta['pull_request']['merged_by'] = self.data['pull_request']['merged_by']['login']
-        self.app.logger.info('%s %s\'s pull request(%s/%s:%s => %s/%s:%s), merged: %s',
-                    self.repo_meta['action'], self.repo_meta['pull_request']['created_by'],
-                    self.repo_meta['pull_request']['owner'], self.repo_meta['pull_request']['name'],
-                    self.repo_meta['pull_request']['branch'], self.repo_meta['owner'],
-                    self.repo_meta['name'], self.repo_meta['branch'],
-                    self.data['pull_request']['merged'])
-        return 'merged_by' in self.repo_meta['pull_request']
+        if repo_config and (not repo_config['branch'] or self.repo_meta['branch'] in repo_config['branch']):
+            if self.data['pull_request']['merged']:
+                self.repo_meta['pull_request']['merged_by'] = self.data['pull_request']['merged_by']['login']
+            self.app.logger.info('%s %s\'s pull request(%s/%s:%s => %s/%s:%s), merged: %s',
+                        self.repo_meta['action'], self.repo_meta['pull_request']['created_by'],
+                        self.repo_meta['pull_request']['owner'], self.repo_meta['pull_request']['name'],
+                        self.repo_meta['pull_request']['branch'], self.repo_meta['owner'],
+                        self.repo_meta['name'], self.repo_meta['branch'],
+                        self.data['pull_request']['merged'])
+            return 'merged_by' in self.repo_meta['pull_request']
+        return False
 
     def _jenkins_build(self, repo_config):
         passman = urllib.request.HTTPPasswordMgrWithPriorAuth()
