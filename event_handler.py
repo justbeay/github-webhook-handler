@@ -23,32 +23,29 @@ class GithubEventHandler:
         """
         github hook event handle goes here
         """
-        self.app.logger.info('handle github event: %s', self.event)
-        self.app.logger.info('data send: %s', json.dumps(self.data, indent=2))
-        events_allowed = ['push', 'pull_request_review']
+        self.app.logger.info('==== handle github event: %s', self.event)
+        # self.app.logger.info('data send: %s', json.dumps(self.data, indent=2))
         if self.event == 'ping':
             return {'msg': 'Hi!'}
-        elif self.event in events_allowed:
+        else:
             event_hit = False
             repo_config = self.get_repo_config()
             if self.event == 'push':
                 event_hit = self._is_push_hit(repo_config)
             elif self.event == 'pull_request_review':
-                event_hit = self._is_pull_request_review_hit(repo_config)
+                event_hit = self._is_pull_request_hit(repo_config)
             # work start execute here...
             if repo_config and event_hit:
-                self.app.logger.debug("==========================")
-                self._jenkins_build(repo_config)
+                self.app.logger.debug("event hit, start tasks under %s/%s...", self.repo_meta['owner'], self.repo_meta['name'])
+                # self._jenkins_build(repo_config)
                 pass
             return "OK"
-        else:
-            return {'msg': 'wrong event type:%s' % self.event}
 
     def get_repo_config(self):
         if self.data and 'repository' in self.data:
             self.repo_meta = {
                 'name': self.data['repository']['name'],
-                'owner': self.data['repository']['owner']['name'],
+                'owner': self.data['repository']['owner']['login'],
             }
             return self.repos_config.get('{owner}/{name}'.format(**self.repo_meta), None)
         return None
@@ -62,14 +59,30 @@ class GithubEventHandler:
         if match:
             self.repo_meta['branch'] = match.groupdict()['branch']
             if repo_config and (not repo_config['branch'] or self.repo_meta['branch'] in repo_config['branch']):
+                if not repo_config['event'] or 'pull_request' in repo_config['event']:
+                    if self.data['commits'][-1]['message'].startswith('Merge pull request'):
+                        return False
                 return True
         return False
 
-    def _is_pull_request_review_hit(self, repo_config):
-        # self.app.logger.info(">> pull_request_review event with action: %s...", self.data['action'])
-        # self.app.logger.info(json.dumps(self.data, indent=2))
-        # todo here...
-        return False
+    def _is_pull_request_hit(self, repo_config):
+        self.repo_meta['action'] = self.data['action']
+        self.repo_meta['branch'] = self.data['pull_request']['base']['ref']
+        self.repo_meta['pull_request'] = {
+            'branch': self.data['pull_request']['head']['ref'],
+            'name': self.data['pull_request']['head']['repo']['name'],
+            'owner': self.data['pull_request']['head']['repo']['owner']['login'],
+            'created_by': self.data['pull_request']['user']['login']
+        }
+        if self.data['pull_request']['merged']:
+            self.repo_meta['pull_request']['merged_by'] = self.data['pull_request']['merged_by']['login']
+        self.app.logger.info('%s the pull request(created by %s), from %s/%s:%s to %s/%s:%s, merged: %s',
+                    self.repo_meta['action'], self.repo_meta['pull_request']['created_by'],
+                    self.repo_meta['pull_request']['owner'], self.repo_meta['pull_request']['name'],
+                    self.repo_meta['pull_request']['branch'], self.repo_meta['owner'],
+                    self.repo_meta['name'], self.repo_meta['branch'],
+                    self.data['pull_request']['merged'])
+        return 'merged_by' in self.repo_meta['pull_request']
 
     def _jenkins_build(self, repo_config):
         passman = urllib.request.HTTPPasswordMgrWithPriorAuth()
