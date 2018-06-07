@@ -37,7 +37,7 @@ class GithubEventHandler:
             # work start execute here...
             if repo_config and event_hit:
                 self.app.logger.debug("event hit, start tasks under %s/%s...", self.repo_meta['owner'], self.repo_meta['name'])
-                # self._jenkins_build(repo_config)
+                self._jenkins_build(repo_config)
                 pass
             return "OK"
 
@@ -100,6 +100,7 @@ class GithubEventHandler:
         opener.addheaders = [('User-agent', 'Mozilla/5.0')]
         urllib.request.install_opener(opener)
         for build_config in repo_config['jenkins_build']:
+            self.app.logger.info('>> start jenkins build job: %s...', build_config['job'])
             # get build api url
             build_api_url = self.global_config['jenkins']['host']
             for project_name in build_config['job'].split('/'):

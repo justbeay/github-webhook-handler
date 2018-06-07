@@ -28,7 +28,7 @@ BASE_APP_PATH = os.path.dirname(os.path.realpath(__file__))
 repos_config = json.loads(io.open(BASE_APP_PATH + '/config/repos.json', 'r').read())
 global_config = json.loads(io.open(BASE_APP_PATH + '/config/global.json', 'r').read())
 
-if global_config['use_proxyfix']:
+if 'use_proxyfix' in global_config and global_config['use_proxyfix']:
     from werkzeug.contrib.fixers import ProxyFix
 
 app = Flask(__name__)
@@ -44,10 +44,10 @@ def index():
         request_ip = ipaddress.ip_address(u'{0}'.format(request.remote_addr))
 
         # If VALIDATE_SOURCEIP is set to false, do not validate source IP
-        if not (global_config['validate_sourceip'] == False):
+        if not ('validate_sourceip' in global_config and global_config['validate_sourceip'] == False):
 
             # If GHE_ADDRESS is specified, use it as the hook_blocks.
-            if global_config['ghe_address']:
+            if 'ghe_address' in global_config:
                 hook_blocks = [global_config['ghe_address']]
             # Otherwise get the hook address blocks from the API.
             else:
