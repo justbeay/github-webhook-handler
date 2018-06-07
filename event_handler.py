@@ -32,7 +32,7 @@ class GithubEventHandler:
             repo_config = self.get_repo_config()
             if self.event == 'push':
                 event_hit = self._is_push_hit(repo_config)
-            elif self.event == 'pull_request_review':
+            elif self.event == 'pull_request':
                 event_hit = self._is_pull_request_hit(repo_config)
             # work start execute here...
             if repo_config and event_hit:
@@ -76,7 +76,7 @@ class GithubEventHandler:
         }
         if self.data['pull_request']['merged']:
             self.repo_meta['pull_request']['merged_by'] = self.data['pull_request']['merged_by']['login']
-        self.app.logger.info('%s the pull request(created by %s), from %s/%s:%s to %s/%s:%s, merged: %s',
+        self.app.logger.info('%s %s\'s pull request(%s/%s:%s => %s/%s:%s), merged: %s',
                     self.repo_meta['action'], self.repo_meta['pull_request']['created_by'],
                     self.repo_meta['pull_request']['owner'], self.repo_meta['pull_request']['name'],
                     self.repo_meta['pull_request']['branch'], self.repo_meta['owner'],
