@@ -1,15 +1,35 @@
 {
-    "user/project": {
-        "secretkey": "asdfswe3",
-        "branch": ["dev"],
-        "event": ["push"],
-        "jenkins_build": [
+    "gituser/repository": {
+        "secretkey": "3409-0345--345234lowsr",
+        "tasks": [
             {
-                "job": "jenkins_job",
-                "params": {
-                    "TRIGGER_BRANCH": "{branch}",
-                    "TRIGGER_Boolean": true
-                }
+                "branch": ["dev"],
+                "event": ["pull_request"],
+                "action": ["opened", "reopened", "edited"],
+                "merged": false,
+                "jenkins_build": [
+                    {
+                        "job": "sampleJenkinsJob",
+                        "params": {
+                            "TRIGGER_BRANCH": "{pull_request[branch]}",
+                            "TRIGGER_Boolean": true,
+                            "NOTICE_EMAIL": "{pull_request[author][email]}"
+                        }
+                    }
+                ]
+            }, {
+                "branch": ["dev"],
+                "event": ["push"],
+                "message_pattern": "^Merge pull request",
+                "jenkins_build": [
+                    {
+                        "job": "tools/test-sonar",
+                        "params": {
+                            "TRIGGER_BRANCH": "{branch}",
+                            "TRIGGER_Boolean": true
+                        }
+                    }
+                ]
             }
         ]
     }
