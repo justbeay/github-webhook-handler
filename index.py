@@ -48,7 +48,7 @@ def index():
 
             # If GHE_ADDRESS is specified, use it as the hook_blocks.
             if 'ghe_address' in global_config:
-                hook_blocks = [global_config['ghe_address']]
+                hook_blocks = global_config['ghe_address']
             # Otherwise get the hook address blocks from the API.
             else:
                 hook_blocks = requests.get('https://api.github.com/meta').json()[
