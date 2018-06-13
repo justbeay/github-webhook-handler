@@ -84,8 +84,8 @@ class GithubEventHandler:
             'name': self.data['pull_request']['head']['repo']['name'],
             'owner': self.data['pull_request']['head']['repo']['owner']['login'],
             'created_by': self.data['pull_request']['user']['login'],
-            'author': {'email': self._get_pull_author(self.data['number'])}
         }
+        self.repo_meta['pull_request']['author'] = {'email': self._get_pull_author(self.data['number'])}
         if not ('branch' in task_config and self.repo_meta['branch'] not in task_config['branch'] or 'pull_request' not in task_config['event']):
             if not ('action' in task_config and self.data['action'] not in task_config['action']):
                 if not ('merged' in task_config and task_config['merged'] != self.data['pull_request']['merged']):
@@ -105,7 +105,7 @@ class GithubEventHandler:
         ssl._create_default_https_context = ssl._create_unverified_context
         opener = urllib.request.build_opener()
         urllib.request.install_opener(opener)
-        github_api_url = 'https://api.github.com/repos/justbeay/jenkinsci-test/pulls/%s/commits' % pull_id
+        github_api_url = 'https://api.github.com/repos/{owner}/{name}/pulls/{number}/commits'.format(**self.repo_meta['pull_request'])
         req = urllib.request.Request(url=github_api_url, method='GET')
         res = opener.open(req)
         json_result = json.loads(res.read().decode('utf-8'))
