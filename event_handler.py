@@ -105,7 +105,7 @@ class GithubEventHandler:
         opener = self._get_auth_opener('https://api.github.com',
                                        self.global_config['github']['user'],
                                        self.global_config['github']['token'])
-        github_api_url = 'https://api.github.com/repos/{owner}/{name}/pulls/{number}/commits'.format(**self.repo_meta['pull_request'])
+        github_api_url = 'https://api.github.com/repos/{owner}/{name}/pulls/{pull_request[number]}/commits'.format(**self.repo_meta)
         req = urllib.request.Request(url=github_api_url, method='GET')
         res = opener.open(req)
         json_result = json.loads(res.read().decode('utf-8'))
