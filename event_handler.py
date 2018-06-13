@@ -85,7 +85,7 @@ class GithubEventHandler:
             'owner': self.data['pull_request']['head']['repo']['owner']['login'],
             'created_by': self.data['pull_request']['user']['login'],
         }
-        self.repo_meta['pull_request']['author'] = {'email': self._get_pull_author(self.data['number'])}
+        self.repo_meta['pull_request']['author'] = {'email': self._get_pull_author()}
         if not ('branch' in task_config and self.repo_meta['branch'] not in task_config['branch'] or 'pull_request' not in task_config['event']):
             if not ('action' in task_config and self.data['action'] not in task_config['action']):
                 if not ('merged' in task_config and task_config['merged'] != self.data['pull_request']['merged']):
@@ -101,10 +101,10 @@ class GithubEventHandler:
                     return True
         return False
 
-    def _get_pull_author(self, pull_id):
-        ssl._create_default_https_context = ssl._create_unverified_context
-        opener = urllib.request.build_opener()
-        urllib.request.install_opener(opener)
+    def _get_pull_author(self):
+        opener = self._get_auth_opener('https://api.github.com',
+                                       self.global_config['github']['user'],
+                                       self.global_config['github']['token'])
         github_api_url = 'https://api.github.com/repos/{owner}/{name}/pulls/{number}/commits'.format(**self.repo_meta['pull_request'])
         req = urllib.request.Request(url=github_api_url, method='GET')
         res = opener.open(req)
@@ -113,19 +113,21 @@ class GithubEventHandler:
         email = json_result[-1]['commit']['author']['email'] if json_result and len(json_result) > 0 else None
         return email
 
-    def _jenkins_build(self, task_config):
+    def _get_auth_opener(self, host, user, token):
         passman = urllib.request.HTTPPasswordMgrWithPriorAuth()
-        passman.add_password(None,
-                             self.global_config['jenkins']['host'],
-                             self.global_config['jenkins']['user'],
-                             self.global_config['jenkins']['token'],
-                             is_authenticated=True)
+        passman.add_password(None, host, user, token, is_authenticated=True)
         auth_handler = urllib.request.HTTPBasicAuthHandler(passman)
         ssl._create_default_https_context = ssl._create_unverified_context
         opener = urllib.request.build_opener(auth_handler)
         # opener.add_handler(urllib.request.ProxyHandler(dict(http='http://127.0.0.1:5555')))
         opener.addheaders = [('User-agent', 'Mozilla/5.0')]
         urllib.request.install_opener(opener)
+        return opener
+
+    def _jenkins_build(self, task_config):
+        opener = self._get_auth_opener(self.global_config['jenkins']['host'],
+                                       self.global_config['jenkins']['user'],
+                                       self.global_config['jenkins']['token'])
         for build_config in task_config['jenkins_build']:
             self.app.logger.info('>> execute jenkins build job: %s...', build_config['job'])
             # get build api url
