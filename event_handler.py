@@ -37,7 +37,7 @@ class GithubEventHandler:
                         task_match.append(task_config)
             # work start execute here...
             for task in task_match:
-                self.app.logger.debug("event hit, start tasks under %s/%s...", self.repo_meta['owner'], self.repo_meta['name'])
+                self.app.logger.info("event hit, start tasks under %s/%s...", self.repo_meta['owner'], self.repo_meta['name'])
                 self._jenkins_build(task)
                 pass
             return "OK"
@@ -106,6 +106,7 @@ class GithubEventHandler:
                                        self.global_config['github']['user'],
                                        self.global_config['github']['token'])
         github_api_url = 'https://api.github.com/repos/{owner}/{name}/pulls/{pull_request[number]}/commits'.format(**self.repo_meta)
+        self.app.logger.debug(">> requesting url: %s", github_api_url)
         req = urllib.request.Request(url=github_api_url, method='GET')
         res = opener.open(req)
         json_result = json.loads(res.read().decode('utf-8'))
