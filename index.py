@@ -7,6 +7,7 @@ import requests
 import ipaddress
 import hmac
 import hashlib
+from logging.config import dictConfig
 from flask import Flask, request, abort
 from event_handler import GithubEventHandler
 
@@ -27,12 +28,13 @@ module.
 BASE_APP_PATH = os.path.dirname(os.path.realpath(__file__))
 repos_config = json.loads(io.open(BASE_APP_PATH + '/config/repos.json', 'r').read())
 global_config = json.loads(io.open(BASE_APP_PATH + '/config/global.json', 'r').read())
+logging_config = json.loads(io.open(BASE_APP_PATH + '/config/logging.json', 'r').read())
 
 if 'use_proxyfix' in global_config and global_config['use_proxyfix']:
     from werkzeug.contrib.fixers import ProxyFix
 
+dictConfig(logging_config)
 app = Flask(__name__)
-app.debug = global_config['debug']
 
 
 @app.route("/", methods=['GET', 'POST'])
