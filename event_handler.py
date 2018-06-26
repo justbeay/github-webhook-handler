@@ -3,7 +3,7 @@
 import json
 import re
 import urllib
-import ssl
+import http_helper
 
 class GithubEventHandler:
     def __init__(self, app, event, data):
@@ -102,33 +102,18 @@ class GithubEventHandler:
         return False
 
     def _get_pull_author(self):
-        opener = self._get_auth_opener('https://api.github.com',
-                                       self.global_config['github']['user'],
-                                       self.global_config['github']['token'])
+        opener = http_helper.get_auth_opener(host='https://api.github.com',
+                                       user=self.global_config['github']['user'],
+                                       token=self.global_config['github']['token'])
         github_api_url = 'https://api.github.com/repos/{owner}/{name}/pulls/{pull_request[number]}/commits'.format(**self.repo_meta)
-        self.app.logger.debug(">> requesting url: %s", github_api_url)
-        req = urllib.request.Request(url=github_api_url, method='GET')
-        res = opener.open(req)
-        json_result = json.loads(res.read().decode('utf-8'))
-        res.close()
+        json_result = http_helper.request_json_api(self.app.logger, opener, github_api_url)
         email = json_result[-1]['commit']['author']['email'] if json_result and len(json_result) > 0 else None
         return email
 
-    def _get_auth_opener(self, host, user, token):
-        passman = urllib.request.HTTPPasswordMgrWithPriorAuth()
-        passman.add_password(None, host, user, token, is_authenticated=True)
-        auth_handler = urllib.request.HTTPBasicAuthHandler(passman)
-        ssl._create_default_https_context = ssl._create_unverified_context
-        opener = urllib.request.build_opener(auth_handler)
-        # opener.add_handler(urllib.request.ProxyHandler(dict(http='http://127.0.0.1:5555')))
-        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-        urllib.request.install_opener(opener)
-        return opener
-
     def _jenkins_build(self, task_config):
-        opener = self._get_auth_opener(self.global_config['jenkins']['host'],
-                                       self.global_config['jenkins']['user'],
-                                       self.global_config['jenkins']['token'])
+        opener = http_helper.get_auth_opener(host=self.global_config['jenkins']['host'],
+                                       user=self.global_config['jenkins']['user'],
+                                       token=self.global_config['jenkins']['token'])
         for build_config in task_config['jenkins_build']:
             self.app.logger.info('>> execute jenkins build job: %s...', build_config['job'])
             # get build api url
@@ -142,8 +127,6 @@ class GithubEventHandler:
                 param_value = param_value.format(**self.repo_meta) if isinstance(param_value, str) else param_value
                 json_param['parameter'].append({ 'name': param_key, 'value': param_value })
             form_data = { 'json': json.dumps(json_param) }
-            req = urllib.request.Request(url = build_api_url,
-                                data = urllib.parse.urlencode(form_data).encode(encoding='utf-8'), 
-                                headers = {'Content-Type': 'application/x-www-form-urlencoded'},
-                                method = 'POST')
-            opener.open(req)
+            http_helper.request_api(self.app.logger, opener, url=build_api_url, method='POST', 
+                                    data=urllib.parse.urlencode(form_data).encode(encoding='utf-8'),
+                                    headers = {'Content-Type': 'application/x-www-form-urlencoded'})
