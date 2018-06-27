@@ -10,6 +10,8 @@ import hashlib
 from logging.config import dictConfig
 from flask import Flask, request, abort
 from event_handler import GithubEventHandler
+from jenkins_build import JenkinsBuild
+from threading import Thread
 
 """
 Conditionally import ProxyFix from werkzeug if the USE_PROXYFIX environment
@@ -91,4 +93,5 @@ if __name__ == "__main__":
         port_number = 80
     if global_config['use_proxyfix']:
         app.wsgi_app = ProxyFix(app.wsgi_app)
-    app.run(host='0.0.0.0', port=port_number)
+    Thread(target=JenkinsBuild.start, args=[app.logger, global_config]).start()
+    app.run(host='0.0.0.0', port=port_number, threaded=True)
