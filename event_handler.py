@@ -86,11 +86,11 @@ class GithubEventHandler:
             'owner': self.data['pull_request']['head']['repo']['owner']['login'],
             'created_by': self.data['pull_request']['user']['login'],
         }
-        self.repo_meta['pull_request']['author'] = {'email': self._get_pull_author()}
         if not ('branch' in task_config and self.repo_meta['branch'] not in task_config['branch'] or 'pull_request' not in task_config['event']):
             if not ('action' in task_config and self.data['action'] not in task_config['action']):
                 if not ('merged' in task_config and task_config['merged'] != self.data['pull_request']['merged']):
                     # task hit
+                    self.repo_meta['pull_request']['author'] = {'email': self._get_pull_author()}
                     if self.data['pull_request']['merged']:
                         self.repo_meta['pull_request']['merged_by'] = self.data['pull_request']['merged_by']['login']
                     self.app.logger.info('%s %s\'s %s pull request (%s/%s:%s => %s/%s:%s), number:%d',
