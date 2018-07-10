@@ -118,17 +118,3 @@ class GithubEventHandler:
         for build_config in task_config['jenkins_build']:
             self.app.logger.info('>> add jenkins build job: %s to build queue...', build_config['job'])
             JenkinsBuild.addTask(build_config, self.repo_meta)
-            # # get build api url
-            # build_api_url = self.global_config['jenkins']['host']
-            # for project_name in build_config['job'].split('/'):
-            #     build_api_url += '/job/' + project_name
-            # build_api_url += '/build?delay=0sec'
-            # # request param
-            # json_param = { "parameter": [] }
-            # for param_key, param_value in build_config['params'].items():
-            #     param_value = param_value.format(**self.repo_meta) if isinstance(param_value, str) else param_value
-            #     json_param['parameter'].append({ 'name': param_key, 'value': param_value })
-            # form_data = { 'json': json.dumps(json_param) }
-            # http_helper.request_api(self.app.logger, opener, url=build_api_url, method='POST', 
-            #                         data=urllib.parse.urlencode(form_data).encode(encoding='utf-8'),
-            #                         headers = {'Content-Type': 'application/x-www-form-urlencoded'})
