@@ -32,7 +32,10 @@ class JenkinsBuild(object):
                 time.sleep(5)
             # no build job in progress, do jenkins build
             logger.info("execute jenkins build job: %s...", jobName)
-            instance.do_build(jobName, buildTask['build_config']['params'], buildTask['repo_meta'])
+            try:
+                instance.do_build(jobName, buildTask['build_config']['params'], buildTask['repo_meta'])
+            except Exception as ex:
+                logger.error("error occurs when do jenkins build, %s:%s", type(ex), ex)
 
     def __init__(self, logger, hostname, username, token):
         self.logger = logger
