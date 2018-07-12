@@ -3,14 +3,11 @@ import io
 import os
 import sys
 import json
-import requests
-import ipaddress
-import hmac
-import hashlib
 from logging.config import dictConfig
 from flask import Flask, request, abort
 from event_handler import GithubEventHandler
 from jenkins_build import JenkinsBuild
+from validation import Validation
 from threading import Thread
 
 """
@@ -37,51 +34,24 @@ if 'use_proxyfix' in global_config and global_config['use_proxyfix']:
 
 dictConfig(logging_config)
 app = Flask(__name__)
+validation = Validation(global_config)
 
 
 @app.route("/", methods=['GET', 'POST'])
 def index():
+    if not validation.validate_ip():
+        abort(403)
     if request.method == 'GET':
         return 'OK'
     elif request.method == 'POST':
-        # Store the IP address of the requester
-        request_ip = ipaddress.ip_address(u'{0}'.format(request.remote_addr))
-
-        # If VALIDATE_SOURCEIP is set to false, do not validate source IP
-        if not ('validate_sourceip' in global_config and global_config['validate_sourceip'] == False):
-
-            # If GHE_ADDRESS is specified, use it as the hook_blocks.
-            if 'ghe_address' in global_config:
-                hook_blocks = global_config['ghe_address']
-            # Otherwise get the hook address blocks from the API.
-            else:
-                hook_blocks = requests.get('https://api.github.com/meta').json()[
-                    'hooks']
-
-            # Check if the POST request is from github.com or GHE
-            for block in hook_blocks:
-                if ipaddress.ip_address(request_ip) in ipaddress.ip_network(block):
-                    break  # the remote_addr is within the network range of github.
-            else:
-                if str(request_ip) != '127.0.0.1':
-                    abort(403)
-
         event = request.headers.get('X-GitHub-Event')
-        payload = json.loads(request.data.decode('utf8'))
+        payload = json.loads(request.data.decode('utf8')) if request.data else None
         handler = GithubEventHandler(app, event, payload)
         handler.set_config(global_config, repos_config)
         repo_config = handler.get_repo_config()
         secretkey = repo_config['secretkey'] if repo_config else None
-        if secretkey:
-            algo, signature = request.headers.get('X-Hub-Signature').split('=') \
-                if request.headers.get('X-Hub-Signature') and request.headers.get('X-Hub-Signature').find('=') > 0 \
-                else [None, None]
-            signature_valid = algo and signature
-            if signature_valid:
-                mac = hmac.new(secretkey.encode('utf-8'), msg=request.data, digestmod=getattr(hashlib, algo))
-                signature_valid = hmac.compare_digest(mac.hexdigest(), signature)
-            if not signature_valid:
-                abort(403)
+        if not validation.validate_secret(secretkey):
+            abort(403)
         result = handler.handle()
         return json.dumps(result) if type(result) == dict else result
 

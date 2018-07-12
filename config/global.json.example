@@ -7,7 +7,7 @@
     "github": {
         "user": "sampleUser",
         "token": "sdfaerw423452354325345esrgsdfgsturyu5sf456",
-        "address": [
+        "hooks_address": [
             "192.30.252.0/22",
             "185.199.108.0/22",
             "140.82.112.0/20"
