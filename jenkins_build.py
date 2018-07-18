@@ -27,9 +27,9 @@ class JenkinsBuild(object):
             instance = JenkinsBuild(logger, global_config['jenkins']['host'], 
                                         global_config['jenkins']['user'], 
                                         global_config['jenkins']['token'])
-            while instance.get_job_building_status(jobName):
-                logger.debug("jenkins job: %s have running task now, wait util free...", jobName)
-                time.sleep(5)
+            # while instance.get_job_building_status(jobName):
+            #     logger.debug("jenkins job: %s have running task now, wait util free...", jobName)
+            #     time.sleep(5)
             # no build job in progress, do jenkins build
             logger.info("execute jenkins build job: %s...", jobName)
             try:
