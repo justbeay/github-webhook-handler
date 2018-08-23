@@ -33,7 +33,6 @@ class JenkinsBuild(object):
             # no build job in progress, do jenkins build
             logger.info("execute jenkins build job: %s...", jobName)
             try:
-                logger.debug("buildTask: " + json.dumps(buildTask)) ###### debug...
                 instance.do_build(jobName, buildTask['build_config']['params'], buildTask['repo_meta'])
             except Exception as ex:
                 logger.error("error occurs when do jenkins build, %s:%s", type(ex), ex)
