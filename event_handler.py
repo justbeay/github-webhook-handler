@@ -82,6 +82,7 @@ class GithubEventHandler:
         self.repo_meta['pull_request'] = {
             'number': self.data['number'],
             'branch': self.data['pull_request']['head']['ref'],
+            'sha': self.data['pull_request']['head']['sha'],
             'name': self.data['pull_request']['head']['repo']['name'],
             'owner': self.data['pull_request']['head']['repo']['owner']['login'],
             'created_by': self.data['pull_request']['user']['login'],
